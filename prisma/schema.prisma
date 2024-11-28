@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+//cmd -> npx prisma migrate dev --name create_user_info
+
+// schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String     @id @default(uuid())
+  fullName     String     @map("full_name")
+  mobileNumber String     @unique @map("mobile_number")
+  email        String     @unique @map("email")
+  dateOfBirth  String     @map("date_of_birth")
+  password     String
+  salt         String
+  socketId     String? // Socket ID for real-time functionality
+  messages     Message[]  @relation("UserMessages")
+  chatRooms    ChatRoom[] @relation("ChatRoomUsers")
+  creationTime DateTime   @default(now()) @map("creation_time")
+
+  @@map("users")
+}
+
+model ChatRoom {
+  id           String    @id @default(uuid())
+  name         String?   @unique
+  isGroup      Boolean   @default(false) // Indicates if the room is a group chat
+  adminId      String?
+  users        User[]    @relation("ChatRoomUsers")
+  messages     Message[]
+  creationTime DateTime  @default(now()) @map("creation_time")
+
+  @@map("chat_rooms")
+}
+
+model Message {
+  id           String   @id @default(uuid())
+  content      String
+  senderId     String   @map("sender_id")
+  chatRoomId   String   @map("chat_room_id")
+  sender       User     @relation("UserMessages", fields: [senderId], references: [id])
+  chatRoom     ChatRoom @relation(fields: [chatRoomId], references: [id])
+  creationTime DateTime @default(now()) @map("creation_time")
+
+  @@map("messages")
+}
