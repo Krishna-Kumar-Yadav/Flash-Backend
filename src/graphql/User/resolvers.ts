@@ -82,7 +82,7 @@ const mutations = {
             return { success: true, message: "New user created successfully", data: res };
         } catch (err) {
             console.error("Error during sign-up:", err);
-            return { success: false, message: "Failed to create user. Email/Number may already be registered." };
+            return { success: false, message: "Server Error" };
         }
     },
 
