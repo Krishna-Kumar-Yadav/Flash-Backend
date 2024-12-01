@@ -17,10 +17,10 @@ const socketIo = async (socket: any, io: any) => {
 
   // Single chat message
   socket.on("newMessage", async (data: any) => {
-    const { senderId, receiverId, content, chatRoomId } = data;
+    const { senderId, recieverId, content, chatRoomId } = data;
 
     try {
-      const receiverSocketId = await UserService.getSocketIdByUserId(receiverId);
+      const receiverSocketId = await UserService.getSocketIdByUserId(recieverId[0]);
 
       if (receiverSocketId) {
         io.to(receiverSocketId).emit("receiveSingleMessage", {
@@ -29,9 +29,9 @@ const socketIo = async (socket: any, io: any) => {
           chatRoomId,
           timestamp: new Date(),
         });
-        console.log(`Message sent to user ${receiverId}`);
+        console.log(`Message sent to user ${recieverId}`);
       } else {
-        console.log(`Recipient ${receiverId} is offline or not connected.`);
+        console.log(`Recipient ${recieverId} is offline or not connected.`);
       }
     } catch (error) {
       console.error("Error sending message:", error);

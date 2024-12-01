@@ -78,6 +78,7 @@ class UserService {
     static getUserById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             const user = db_1.prismaClient.user.findUnique({ where: { id } });
+            console.log(user);
             return user;
         });
     }
@@ -248,6 +249,9 @@ class UserService {
     }
     static getSocketIdByUserId(userId) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (!userId) {
+                throw new Error("User ID is undefined or null");
+            }
             const user = yield db_1.prismaClient.user.findUnique({
                 where: { id: userId },
                 select: { socketId: true },
@@ -378,6 +382,13 @@ class UserService {
                 include: {
                     users: true,
                 }
+            });
+        });
+    }
+    static deleteChatById(chatId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield db_1.prismaClient.message.delete({
+                where: { id: chatId }
             });
         });
     }

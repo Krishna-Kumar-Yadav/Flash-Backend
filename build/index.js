@@ -22,6 +22,8 @@ const socket_io_1 = require("socket.io");
 const http_1 = require("http");
 const socket_1 = __importDefault(require("./socket"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
 // Load environment variables based on NODE_ENV
 const NODE_ENV = process.env.NODE_ENV || 'development';
 dotenv_1.default.config({ path: `.env.${NODE_ENV}` });
@@ -32,8 +34,6 @@ function mainServer() {
         const PORT = Number(process.env.PORT) || 8000;
         const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
         const GRAPHQL_PATH = process.env.GRAPHQL_PATH || "/graphql";
-        // Create HTTP server
-        const httpServer = (0, http_1.createServer)(app);
         // Apply global CORS middleware
         app.use((0, cors_1.default)({
             origin: CORS_ORIGIN,
@@ -41,11 +41,41 @@ function mainServer() {
         }));
         app.use((0, cookie_parser_1.default)());
         app.use(express_1.default.json());
-        app.get('/', (req, res) => {
-            res.send(`Server is running in ${NODE_ENV} mode`);
+        const imagesPath = path_1.default.resolve(__dirname, '../uploads/');
+        app.use('/uploads', express_1.default.static(imagesPath));
+        // Set CORS headers manually (if necessary)
+        app.use((req, res, next) => {
+            res.header('Access-Control-Allow-Origin', CORS_ORIGIN);
+            res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE');
+            res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            next();
         });
-        // Initialize GraphQL server
+        // Configure Multer storage for file uploads
+        const storage = multer_1.default.diskStorage({
+            destination: (req, file, cb) => {
+                cb(null, 'uploads/');
+            },
+            filename: (req, file, cb) => {
+                const encodedFilename = file.originalname;
+                cb(null, encodedFilename);
+            }
+        });
+        const upload = (0, multer_1.default)({
+            storage,
+            limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10 MB
+        });
+        // Upload endpoint to handle file uploads
+        app.post('/uploads', upload.single('file'), (req, res) => {
+            if (req.file) {
+                res.json({ message: 'File uploaded successfully', file: req.file });
+            }
+            else {
+                res.status(400).json({ message: 'No file uploaded or file too large' });
+            }
+        });
+        // GraphQL setup
         const gqlServer = yield (0, graphql_1.default)();
+        // GraphQL middleware with context setup
         app.use(GRAPHQL_PATH, (0, express4_1.expressMiddleware)(gqlServer, {
             context: (_a) => __awaiter(this, [_a], void 0, function* ({ req, res }) {
                 try {
@@ -69,18 +99,19 @@ function mainServer() {
             })
         }));
         // Initialize Socket.IO server
+        const httpServer = (0, http_1.createServer)(app);
         const io = new socket_io_1.Server(httpServer, {
             cors: {
                 origin: CORS_ORIGIN,
-                methods: ["GET", "POST"],
+                methods: ["GET", "POST", "PUT", "DELETE"],
                 allowedHeaders: ["Content-Type"],
                 credentials: true,
             },
         });
         io.on("connection", (socket) => {
-            (0, socket_1.default)(socket, io);
+            (0, socket_1.default)(socket, io); // Handle socket events
         });
-        // Start server
+        // Start the server
         httpServer.listen(PORT, () => {
             console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
         });

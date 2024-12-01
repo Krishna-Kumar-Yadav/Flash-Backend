@@ -11,5 +11,5 @@ exports.mutation = `
     deleteGroup(groupName : String!): DeleteResponse!
     updateGroup(groupName : String!,userIds : [ID],newGroupName : String) : UpdateResponse
     deleteUserFromGroup(groupName : String! , userId : String!) : DeleteResponse!
-    
+    deleteChat(chatId : String!) : DeleteResponse
 `;

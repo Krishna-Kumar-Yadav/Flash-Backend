@@ -115,7 +115,7 @@ const mutations = {
 
             if (isGroupChat) {
 
-                const groupParticipants = payload.recieverId; // Assuming recieverId is the groupId
+                const groupParticipants = payload.recieverId;
                 for (const participant of groupParticipants) {
 
                     if (participant !== payload.senderId) {
@@ -136,8 +136,9 @@ const mutations = {
                 }
             } else {
                 // Handle single chat
-                const recieverId = payload.recieverId[0]
-                const receiverSocketId = await UserService.getSocketIdByUserId(recieverId);
+                const reciever = payload.recieverId[0]
+
+                const receiverSocketId = await UserService.getSocketIdByUserId(reciever);
 
                 if (receiverSocketId) {
                     io.to(receiverSocketId).emit("receiveSingleMessage", {
@@ -244,6 +245,16 @@ const mutations = {
             console.log(err);
             return { success: false }
 
+        }
+    },
+
+    deleteChat: async (_: unknown, { chatId }: { chatId: string }) => {
+        try {
+            await UserService.deleteChatById(chatId);
+            return { success: true, message: "Message Deleted" };
+        } catch (err) {
+            console.log(err);
+            return { success: false, message: "Message Deletion Failed" };
         }
     }
 

@@ -8,11 +8,12 @@ import { Server } from 'socket.io';
 import { createServer } from 'http';
 import socketIo from './socket';
 import dotenv from 'dotenv';
+import multer from 'multer';
+import path from 'path';
 
 // Load environment variables based on NODE_ENV
 const NODE_ENV = process.env.NODE_ENV || 'development';
 dotenv.config({ path: `.env.${NODE_ENV}` });
-
 
 async function mainServer() {
     const app = express();
@@ -21,9 +22,6 @@ async function mainServer() {
     const PORT = Number(process.env.PORT) || 8000;
     const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
     const GRAPHQL_PATH = process.env.GRAPHQL_PATH || "/graphql";
-
-    // Create HTTP server
-    const httpServer = createServer(app);
 
     // Apply global CORS middleware
     app.use(cors({
@@ -34,13 +32,46 @@ async function mainServer() {
     app.use(cookieParser());
     app.use(express.json());
 
-    app.get('/', (req, res) => {
-        res.send(`Server is running in ${NODE_ENV} mode`);
+    const imagesPath = path.resolve(__dirname, '../uploads/');
+    app.use('/uploads', express.static(imagesPath));
+
+    // Set CORS headers manually (if necessary)
+    app.use((req, res, next) => {
+        res.header('Access-Control-Allow-Origin', CORS_ORIGIN);
+        res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        next();
     });
 
-    // Initialize GraphQL server
+    // Configure Multer storage for file uploads
+    const storage = multer.diskStorage({
+        destination: (req, file, cb) => {
+            cb(null, 'uploads/');
+        },
+        filename: (req, file, cb) => {
+            const encodedFilename = file.originalname;
+            cb(null, encodedFilename);
+        }
+    });
+
+    const upload = multer({
+        storage,
+        limits: { fileSize: 10 * 1024 * 1024 },  // Limit file size to 10 MB
+    });
+
+    // Upload endpoint to handle file uploads
+    app.post('/uploads', upload.single('file'), (req, res) => {
+        if (req.file) {
+            res.json({ message: 'File uploaded successfully', file: req.file });
+        } else {
+            res.status(400).json({ message: 'No file uploaded or file too large' });
+        }
+    });
+
+    // GraphQL setup
     const gqlServer = await apolloGraphqlServer();
 
+    // GraphQL middleware with context setup
     app.use(GRAPHQL_PATH, expressMiddleware(gqlServer, {
         context: async ({ req, res }) => {
             try {
@@ -63,20 +94,21 @@ async function mainServer() {
     }));
 
     // Initialize Socket.IO server
+    const httpServer = createServer(app);
     const io = new Server(httpServer, {
         cors: {
             origin: CORS_ORIGIN,
-            methods: ["GET", "POST"],
+            methods: ["GET", "POST", "PUT", "DELETE"],
             allowedHeaders: ["Content-Type"],
             credentials: true,
         },
     });
 
     io.on("connection", (socket) => {
-        socketIo(socket, io);
+        socketIo(socket, io);  // Handle socket events
     });
 
-    // Start server
+    // Start the server
     httpServer.listen(PORT, () => {
         console.log(`Server running on port ${PORT} in ${NODE_ENV} mode`);
     });

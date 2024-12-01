@@ -29,9 +29,9 @@ const socketIo = (socket, io) => __awaiter(void 0, void 0, void 0, function* () 
     }));
     // Single chat message
     socket.on("newMessage", (data) => __awaiter(void 0, void 0, void 0, function* () {
-        const { senderId, receiverId, content, chatRoomId } = data;
+        const { senderId, recieverId, content, chatRoomId } = data;
         try {
-            const receiverSocketId = yield user_1.default.getSocketIdByUserId(receiverId);
+            const receiverSocketId = yield user_1.default.getSocketIdByUserId(recieverId[0]);
             if (receiverSocketId) {
                 io.to(receiverSocketId).emit("receiveSingleMessage", {
                     senderId,
@@ -39,10 +39,10 @@ const socketIo = (socket, io) => __awaiter(void 0, void 0, void 0, function* () 
                     chatRoomId,
                     timestamp: new Date(),
                 });
-                console.log(`Message sent to user ${receiverId}`);
+                console.log(`Message sent to user ${recieverId}`);
             }
             else {
-                console.log(`Recipient ${receiverId} is offline or not connected.`);
+                console.log(`Recipient ${recieverId} is offline or not connected.`);
             }
         }
         catch (error) {

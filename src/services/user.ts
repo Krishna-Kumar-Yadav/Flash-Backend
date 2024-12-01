@@ -117,6 +117,8 @@ class UserService {
 
     public static async getUserById(id: string) {
         const user = prismaClient.user.findUnique({ where: { id } })
+        console.log(user);
+
         return user
     }
 
@@ -217,6 +219,7 @@ class UserService {
                     content: payload.content,
                     senderId: payload.senderId,
                     chatRoomId: chatRoom.id,
+
                 },
             });
         } else {
@@ -232,6 +235,7 @@ class UserService {
                     content: payload.content,
                     senderId: payload.senderId,
                     chatRoomId: chatRoom.id,
+
                 },
             });
         }
@@ -305,7 +309,12 @@ class UserService {
         return deletedUser;
     }
 
-    public static async getSocketIdByUserId(userId: string) {
+    public static async getSocketIdByUserId(userId: string | undefined) {
+
+        if (!userId) {
+            throw new Error("User ID is undefined or null");
+        }
+
         const user = await prismaClient.user.findUnique({
             where: { id: userId },
             select: { socketId: true },
@@ -440,6 +449,12 @@ class UserService {
 
     }
 
+    public static async deleteChatById(chatId: string) {
+        await prismaClient.message.delete({
+            where: { id: chatId }
+        })
+
+    }
 
 
 

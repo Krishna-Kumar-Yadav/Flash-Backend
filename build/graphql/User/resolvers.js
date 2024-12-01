@@ -88,7 +88,7 @@ const mutations = {
         }
         catch (err) {
             console.error("Error during sign-up:", err);
-            return { success: false, message: "Failed to create user. Email/Number may already be registered." };
+            return { success: false, message: "Server Error" };
         }
     }),
     signIn: (_1, payload_1, _a) => __awaiter(void 0, [_1, payload_1, _a], void 0, function* (_, payload, { res }) {
@@ -112,7 +112,7 @@ const mutations = {
             const message = yield user_1.default.sendMessage(payload);
             const isGroupChat = payload.groupName;
             if (isGroupChat) {
-                const groupParticipants = payload.recieverId; // Assuming recieverId is the groupId
+                const groupParticipants = payload.recieverId;
                 for (const participant of groupParticipants) {
                     if (participant !== payload.senderId) {
                         const receiverSocketId = yield user_1.default.getSocketIdByUserId(participant);
@@ -133,8 +133,8 @@ const mutations = {
             }
             else {
                 // Handle single chat
-                const recieverId = payload.recieverId[0];
-                const receiverSocketId = yield user_1.default.getSocketIdByUserId(recieverId);
+                const reciever = payload.recieverId[0];
+                const receiverSocketId = yield user_1.default.getSocketIdByUserId(reciever);
                 if (receiverSocketId) {
                     io.to(receiverSocketId).emit("receiveSingleMessage", {
                         senderId: payload.senderId,
@@ -235,6 +235,16 @@ const mutations = {
         catch (err) {
             console.log(err);
             return { success: false };
+        }
+    }),
+    deleteChat: (_1, _a) => __awaiter(void 0, [_1, _a], void 0, function* (_, { chatId }) {
+        try {
+            yield user_1.default.deleteChatById(chatId);
+            return { success: true, message: "Message Deleted" };
+        }
+        catch (err) {
+            console.log(err);
+            return { success: false, message: "Message Deletion Failed" };
         }
     })
 };
