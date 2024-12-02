@@ -117,4 +117,6 @@ function mainServer() {
         });
     });
 }
-mainServer();
+mainServer().catch((err) => {
+    console.error('Error starting the server:', err);
+});

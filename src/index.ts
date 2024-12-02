@@ -1,27 +1,27 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { expressMiddleware } from '@apollo/server/express4';
 import apolloGraphqlServer from './graphql';
 import cors from 'cors';
 import UserService from './services/user';
 import cookieParser from 'cookie-parser';
 import { Server } from 'socket.io';
-import { createServer } from 'http';
+import { createServer, Server as HTTPServer } from 'http';
 import socketIo from './socket';
 import dotenv from 'dotenv';
-import multer from 'multer';
+import multer, { DiskStorageOptions, Multer, StorageEngine } from 'multer';
 import path from 'path';
 
 // Load environment variables based on NODE_ENV
 const NODE_ENV = process.env.NODE_ENV || 'development';
 dotenv.config({ path: `.env.${NODE_ENV}` });
 
-async function mainServer() {
+async function mainServer(): Promise<void> {
     const app = express();
 
     // Load environment variables
-    const PORT = Number(process.env.PORT) || 8000;
-    const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
-    const GRAPHQL_PATH = process.env.GRAPHQL_PATH || "/graphql";
+    const PORT: number = Number(process.env.PORT) || 8000;
+    const CORS_ORIGIN: string = process.env.CORS_ORIGIN || "http://localhost:5173";
+    const GRAPHQL_PATH: string = process.env.GRAPHQL_PATH || "/graphql";
 
     // Apply global CORS middleware
     app.use(cors({
@@ -36,7 +36,7 @@ async function mainServer() {
     app.use('/uploads', express.static(imagesPath));
 
     // Set CORS headers manually (if necessary)
-    app.use((req, res, next) => {
+    app.use((req: Request, res: Response, next: NextFunction) => {
         res.header('Access-Control-Allow-Origin', CORS_ORIGIN);
         res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE');
         res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -44,23 +44,23 @@ async function mainServer() {
     });
 
     // Configure Multer storage for file uploads
-    const storage = multer.diskStorage({
-        destination: (req, file, cb) => {
+    const storage: StorageEngine = multer.diskStorage({
+        destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
             cb(null, 'uploads/');
         },
-        filename: (req, file, cb) => {
+        filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
             const encodedFilename = file.originalname;
             cb(null, encodedFilename);
         }
     });
 
-    const upload = multer({
+    const upload: Multer = multer({
         storage,
-        limits: { fileSize: 10 * 1024 * 1024 },  // Limit file size to 10 MB
+        limits: { fileSize: 10 * 1024 * 1024 }, // Limit file size to 10 MB
     });
 
     // Upload endpoint to handle file uploads
-    app.post('/uploads', upload.single('file'), (req, res) => {
+    app.post('/uploads', upload.single('file'), (req: Request, res: Response) => {
         if (req.file) {
             res.json({ message: 'File uploaded successfully', file: req.file });
         } else {
@@ -73,7 +73,7 @@ async function mainServer() {
 
     // GraphQL middleware with context setup
     app.use(GRAPHQL_PATH, expressMiddleware(gqlServer, {
-        context: async ({ req, res }) => {
+        context: async ({ req, res }: { req: Request; res: Response }) => {
             try {
                 const authHeader = req.headers.authorization;
                 const token = authHeader && authHeader.split(' ')[1];
@@ -94,7 +94,7 @@ async function mainServer() {
     }));
 
     // Initialize Socket.IO server
-    const httpServer = createServer(app);
+    const httpServer: HTTPServer = createServer(app);
     const io = new Server(httpServer, {
         cors: {
             origin: CORS_ORIGIN,
@@ -105,7 +105,7 @@ async function mainServer() {
     });
 
     io.on("connection", (socket) => {
-        socketIo(socket, io);  // Handle socket events
+        socketIo(socket, io); // Handle socket events
     });
 
     // Start the server
@@ -114,4 +114,6 @@ async function mainServer() {
     });
 }
 
-mainServer();
+mainServer().catch((err) => {
+    console.error('Error starting the server:', err);
+});
